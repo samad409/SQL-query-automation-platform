@@ -14,7 +14,7 @@ def load_and_clean_data(train_path, test_path):
     # or just return the training data as per your specific flow.
     # For this structure, we'll process the training file primarily.
     
-    # Extraction [cite: 49]
+   
     # Ensure your CSV headers match these keys ('question', 'sql')
     questions = df_train['question'].astype(str).tolist()
     sql_queries = df_train['sql'].astype(str).tolist()

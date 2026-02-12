@@ -7,8 +7,7 @@ def tokenize_data(questions, sql_queries):
     """
     print("--- Stage 2: Tokenization ---")
     
-    # Tokenizer for Natural Language Questions [cite: 57]
-    # 'oov_token' handles words not in the training vocabulary [cite: 59]
+    
     input_tokenizer = Tokenizer(oov_token="<OOV>", filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n')
     input_tokenizer.fit_on_texts(questions)
     input_sequences = input_tokenizer.texts_to_sequences(questions)

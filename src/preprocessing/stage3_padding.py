@@ -8,13 +8,13 @@ def pad_and_split(input_seqs, output_seqs):
     """
     print("--- Stage 3: Padding & Splitting ---")
     
-    MAX_LENGTH = 30  # Fixed sequence length as per paper [cite: 62]
+    MAX_LENGTH = 30  
     
-    # Pad sequences [cite: 60]
+    # Pad sequences to the maximum length
     encoder_input_data = pad_sequences(input_seqs, maxlen=MAX_LENGTH, padding='post')
     decoder_input_data = pad_sequences(output_seqs, maxlen=MAX_LENGTH, padding='post')
     
-    # Split 80% Training, 20% Validation [cite: 64]
+    # Split 80% Training, 20% Validation 
     input_train, input_val, output_train, output_val = train_test_split(
         encoder_input_data, 
         decoder_input_data, 
