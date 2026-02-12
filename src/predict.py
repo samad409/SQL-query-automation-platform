@@ -81,5 +81,18 @@ if __name__ == "__main__":
     while True:
         q = input("Question: ")
         if q == 'exit': break
-        print("SQL:", decode_sequence(q, model, input_tokenizer, output_tokenizer))
+        
+        # 1. Generate the raw prediction
+        sql_query = decode_sequence(q, model, input_tokenizer, output_tokenizer)
+        
+        # 2. Apply the "Missing Equals Sign" Fix
+        if "where" in sql_query and "=" not in sql_query:
+            # Quick hack: find the last word (the value) and put an = before it
+            parts = sql_query.split()
+            if len(parts) > 1:
+                # Reassemble: ... where col = value
+                sql_query = " ".join(parts[:-1]) + " = " + parts[-1]
+
+        # 3. Print final result
+        print("SQL:", sql_query)
         print("-" * 20)
