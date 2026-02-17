@@ -3,6 +3,7 @@ from transformers import T5Tokenizer, T5ForConditionalGeneration
 print("Loading trained model...")
 tokenizer = T5Tokenizer.from_pretrained("t5-small")
 model = T5ForConditionalGeneration.from_pretrained("model")
+print("Model ready.")
 
 while True:
     question = input("Enter question: ")
