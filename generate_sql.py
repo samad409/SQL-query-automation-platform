@@ -1,5 +1,6 @@
 import torch
 import logging
+import time
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 
 print("Loading trained model...")
