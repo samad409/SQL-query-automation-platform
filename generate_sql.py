@@ -3,6 +3,8 @@ import logging
 import time
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 
+VERSION = "1.0.0"
+
 print("Loading trained model...")
 tokenizer = T5Tokenizer.from_pretrained("t5-small")
 model = T5ForConditionalGeneration.from_pretrained("model")
