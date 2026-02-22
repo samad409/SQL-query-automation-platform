@@ -4,6 +4,8 @@ import time
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 
 VERSION = "1.0.0"
+MODEL_PATH = "model"
+TOKENIZER_NAME = "t5-small"
 
 print("Loading trained model...")
 tokenizer = T5Tokenizer.from_pretrained("t5-small")
