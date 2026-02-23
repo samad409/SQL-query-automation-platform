@@ -8,8 +8,8 @@ MODEL_PATH = "model"
 TOKENIZER_NAME = "t5-small"
 
 print("Loading trained model...")
-tokenizer = T5Tokenizer.from_pretrained("t5-small")
-model = T5ForConditionalGeneration.from_pretrained("model")
+tokenizer = T5Tokenizer.from_pretrained(TOKENIZER_NAME)
+model = T5ForConditionalGeneration.from_pretrained(MODEL_PATH)
 print("Model ready.")
 
 while True:
