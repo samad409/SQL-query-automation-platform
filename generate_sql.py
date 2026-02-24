@@ -7,6 +7,8 @@ VERSION = "1.0.0"
 MODEL_PATH = "model"
 TOKENIZER_NAME = "t5-small"
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 print("Loading trained model...")
 tokenizer = T5Tokenizer.from_pretrained(TOKENIZER_NAME)
 model = T5ForConditionalGeneration.from_pretrained(MODEL_PATH)
