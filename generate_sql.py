@@ -6,6 +6,7 @@ from transformers import T5Tokenizer, T5ForConditionalGeneration
 VERSION = "1.0.0"
 MODEL_PATH = "model"
 TOKENIZER_NAME = "t5-small"
+PREFIX = "translate English to SQL: "
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
