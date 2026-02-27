@@ -18,7 +18,7 @@ print("Model ready.")
 
 while True:
     question = input("Enter question: ")
-    input_text = "translate English to SQL: " + question
+    input_text = PREFIX + question
     input_ids = tokenizer.encode(input_text, return_tensors="pt")
     input_ids = input_ids.to(device)
     outputs = model.generate(input_ids, max_length=100)
