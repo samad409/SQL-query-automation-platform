@@ -21,6 +21,6 @@ while True:
     input_text = PREFIX + question
     input_ids = tokenizer.encode(input_text, return_tensors="pt")
     input_ids = input_ids.to(device)
-    outputs = model.generate(input_ids, max_length=100)
+    outputs = model.generate(input_ids, max_length=200, num_beams=4)
     sql = tokenizer.decode(outputs[0], skip_special_tokens=True)
     print("Generated SQL:", sql)
