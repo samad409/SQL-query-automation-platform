@@ -16,6 +16,8 @@ model = T5ForConditionalGeneration.from_pretrained(MODEL_PATH)
 model = model.to(device)
 print("Model ready.")
 
+history = []
+
 while True:
     question = input("Enter question: ")
     input_text = PREFIX + question
