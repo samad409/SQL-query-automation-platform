@@ -20,6 +20,8 @@ history = []
 
 while True:
     question = input("Enter question: ")
+    if question.lower() == "quit":
+        break
     input_text = PREFIX + question
     input_ids = tokenizer.encode(input_text, return_tensors="pt")
     input_ids = input_ids.to(device)
