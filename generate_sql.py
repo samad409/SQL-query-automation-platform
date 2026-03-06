@@ -22,6 +22,9 @@ while True:
     question = input("Enter question: ")
     if question.lower() == "quit":
         break
+    if question.lower() == "help":
+        print("Commands: quit, help, history")
+        continue
     input_text = PREFIX + question
     input_ids = tokenizer.encode(input_text, return_tensors="pt")
     input_ids = input_ids.to(device)
