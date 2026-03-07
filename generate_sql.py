@@ -25,6 +25,10 @@ while True:
     if question.lower() == "help":
         print("Commands: quit, help, history")
         continue
+    if question.lower() == "history":
+        for i, q in enumerate(history, 1):
+            print(f"{i}. {q}")
+        continue
     input_text = PREFIX + question
     input_ids = tokenizer.encode(input_text, return_tensors="pt")
     input_ids = input_ids.to(device)
