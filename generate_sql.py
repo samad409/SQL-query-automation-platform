@@ -29,6 +29,7 @@ while True:
         for i, q in enumerate(history, 1):
             print(f"{i}. {q}")
         continue
+    history.append(question)
     input_text = PREFIX + question
     input_ids = tokenizer.encode(input_text, return_tensors="pt")
     input_ids = input_ids.to(device)
