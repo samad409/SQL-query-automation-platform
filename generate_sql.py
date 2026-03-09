@@ -19,7 +19,7 @@ print("Model ready.")
 history = []
 
 while True:
-    question = input("Enter question: ")
+    question = input("Enter question: ").strip()
     if question.lower() == "quit":
         break
     if question.lower() == "help":
