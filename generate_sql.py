@@ -35,6 +35,7 @@ while True:
     input_text = PREFIX + question
     input_ids = tokenizer.encode(input_text, return_tensors="pt")
     input_ids = input_ids.to(device)
+    start_time = time.time()
     outputs = model.generate(
         input_ids, max_length=200, num_beams=4,
         early_stopping=True, repetition_penalty=1.2, length_penalty=1.0
