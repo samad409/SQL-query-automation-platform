@@ -40,5 +40,7 @@ while True:
         input_ids, max_length=200, num_beams=4,
         early_stopping=True, repetition_penalty=1.2, length_penalty=1.0
     )
+    elapsed = time.time() - start_time
     sql = tokenizer.decode(outputs[0], skip_special_tokens=True)
     print("Generated SQL:", sql)
+    print(f"Generation time: {elapsed:.2f}s")
