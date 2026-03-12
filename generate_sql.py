@@ -8,6 +8,8 @@ MODEL_PATH = "model"
 TOKENIZER_NAME = "t5-small"
 PREFIX = "translate English to SQL: "
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 print("Loading trained model...")
