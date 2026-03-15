@@ -12,26 +12,32 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
+print(f"SQL Query Automation Platform v{VERSION}")
 print("Loading trained model...")
 tokenizer = T5Tokenizer.from_pretrained(TOKENIZER_NAME)
 model = T5ForConditionalGeneration.from_pretrained(MODEL_PATH)
 model = model.to(device)
-print("Model ready.")
+print(f"Model loaded on {device}. Type 'help' for available commands.")
 
 history = []
 
 while True:
-    question = input("Enter question: ").strip()
+    question = input("\nEnter question: ").strip()
     if not question:
         continue
     if question.lower() == "quit":
+        print("Goodbye!")
         break
     if question.lower() == "help":
-        print("Commands: quit, help, history")
+        print("Commands: quit, help, history, clear")
         continue
     if question.lower() == "history":
         for i, q in enumerate(history, 1):
             print(f"{i}. {q}")
+        continue
+    if question.lower() == "clear":
+        history.clear()
+        print("History cleared.")
         continue
     history.append(question)
     logging.info(f"Query: {question}")
