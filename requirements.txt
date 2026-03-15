@@ -1,4 +1,5 @@
-numpy
+torch
+transformers
+datasets
 pandas
-tensorflow
 scikit-learn

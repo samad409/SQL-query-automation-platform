@@ -1,0 +1,6 @@
+# Ignore ML model weights and checkpoints
+*.safetensors
+*.pt
+*.bin
+results/
+model/
