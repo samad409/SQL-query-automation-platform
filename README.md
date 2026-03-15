@@ -131,6 +131,7 @@ From `requirements.txt`:
 - datasets
 - pandas
 - scikit-learn
+- tabulate
 
 ## Notes
 
