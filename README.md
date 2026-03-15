@@ -137,3 +137,9 @@ From `requirements.txt`:
 
 - If GPU is available, training/inference can run faster with CUDA.
 - Keep training prefix format consistent (`translate English to SQL:`) across training and inference for best results.
+
+## Troubleshooting
+
+- If you get `no such table` errors, run `python build_database.py` again to recreate demo tables.
+- If model files are missing, run `python train.py` to regenerate the `model/` folder.
+- If predictions look empty, verify the prompt prefix is unchanged in both training and inference scripts.
