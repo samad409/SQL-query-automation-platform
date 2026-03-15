@@ -143,3 +143,10 @@ From `requirements.txt`:
 - If you get `no such table` errors, run `python build_database.py` again to recreate demo tables.
 - If model files are missing, run `python train.py` to regenerate the `model/` folder.
 - If predictions look empty, verify the prompt prefix is unchanged in both training and inference scripts.
+
+## Recommended Workflow
+
+1. Install dependencies with `pip install -r requirements.txt`.
+2. Train or reuse a saved model in `model/`.
+3. Initialize SQLite data using `python build_database.py`.
+4. Start interactive generation with `python generate_sql.py`.
