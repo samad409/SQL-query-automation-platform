@@ -1,152 +1,233 @@
 # SQL Query Automation Platform
 
-This project trains a T5 model to convert English questions into SQL queries, then provides an interactive script to generate SQL from user input.
+An end-to-end Text-to-SQL project that fine-tunes a T5 model to convert natural-language questions into SQL, then executes generated SQL against a local SQLite database for immediate results.
 
-## Overview
+This repository contains three main runtime components:
 
-The workflow has two main phases:
+- A training pipeline to fine-tune T5 on question-to-SQL pairs.
+- An inference CLI that translates user questions into SQL.
+- A local SQLite bootstrap script that creates schema and seed data for testing.
 
-1. Training (`train.py`)
-2. Inference (`generate_sql.py`)
+## 1. Project Goals
 
-Training uses `dataset/text_to_sql_dataset_5000.csv` with two columns:
+The project is designed to solve a practical workflow:
 
-- `question`: natural language text
-- `sql`: target SQL query
+1. User asks a question in plain English.
+2. Model generates SQL from that question.
+3. SQL is executed directly on a local database.
+4. Results are shown in a readable table format.
 
-The model is fine-tuned from `t5-small` and saved locally in the `model/` folder.
+This shortens the path from intent to query execution and can serve as a base for a larger NL-to-SQL product.
 
-## Project Structure
+## 2. Repository Structure
 
-```
+```text
 SQL-query-automation-platfrom/
-├── dataset/
-│   └── text_to_sql_dataset_5000.csv
-├── model/                         # saved trained model + tokenizer
-├── results/                       # trainer output and checkpoints
-├── train.py                       # fine-tuning script
-├── generate_sql.py                # interactive SQL generation script
-├── requirements.txt
-└── README.md
+|-- dataset/
+|   `-- text_to_sql_dataset_5000.csv
+|-- model/
+|   |-- config.json
+|   |-- generation_config.json
+|   |-- model.safetensors
+|   |-- tokenizer.json
+|   `-- tokenizer_config.json
+|-- results/
+|   |-- checkpoint-500/
+|   `-- checkpoint-508/
+|-- build_database.py
+|-- generate_sql.py
+|-- train.py
+|-- requirements.txt
+`-- README.md
 ```
 
-## How It Works
+What each script does:
 
-### 1. Training Pipeline (`train.py`)
+- `train.py`: Fine-tunes `t5-small` on your dataset and saves model/tokenizer.
+- `generate_sql.py`: Loads the trained model, accepts interactive questions, generates SQL, executes SQL, and displays results.
+- `build_database.py`: Creates a local SQLite database and inserts sample data.
 
-`train.py` performs the following steps:
+## 3. Data and Learning Task
 
-1. Loads dataset using Pandas.
-2. Splits data into train/validation/test using `train_test_split`.
-3. Converts Pandas DataFrames to Hugging Face `Dataset` objects.
-4. Preprocesses each sample with a prompt prefix:
+### Dataset contract
+
+Training expects `dataset/text_to_sql_dataset_5000.csv` with at least:
+
+- `question`: Natural language input.
+- `sql`: Ground-truth SQL query.
+
+### Task formulation
+
+The model is trained as a sequence-to-sequence translation task using prompt-prefix conditioning:
 
 ```text
 translate English to SQL: <question>
 ```
 
-5. Tokenizes both input question and target SQL (`max_length=64`, padded and truncated).
-6. Fine-tunes `T5ForConditionalGeneration` with Hugging Face `Trainer`.
-7. Saves the fine-tuned model and tokenizer to `model/`.
+The same prefix must be used in both training and inference to keep behavior consistent.
 
-Training output checkpoints are stored in `results/` (for example: `results/checkpoint-500`).
+## 4. Training Pipeline Deep Dive (`train.py`)
 
-### 2. Inference Pipeline (`generate_sql.py`)
+The training script performs these steps:
 
-`generate_sql.py`:
+1. Loads CSV with Pandas.
+2. Splits data with `train_test_split`:
+	 - 10% test split first.
+	 - 10% of the remaining training portion for validation.
+3. Converts DataFrames to Hugging Face `Dataset` objects.
+4. Tokenizes inputs and labels with max length 64, truncation, and max-length padding.
+5. Trains `T5ForConditionalGeneration` using Hugging Face `Trainer`.
+6. Saves model/tokenizer to `model/`.
 
-1. Loads tokenizer (`t5-small`) and trained model from `model/`.
-2. Detects device automatically (`cuda` if available, else `cpu`).
-3. Runs an interactive CLI loop for user questions.
-4. Builds model input using the same prefix used in training.
-5. Generates SQL with beam search settings:
-   - `max_length=200`
-   - `num_beams=4`
-   - `early_stopping=True`
-   - `repetition_penalty=1.2`
-   - `length_penalty=1.0`
-6. Prints generated SQL and generation time.
+### Key training settings currently used
 
-Supported CLI commands:
+- Base model: `t5-small`
+- Epochs: `2`
+- Batch size: `16` (per device)
+- Save steps: `500`
+- Logging steps: `50`
+- Mixed precision: enabled automatically when CUDA is available (`fp16=True`)
 
-- `help`: show commands
-- `history`: show asked questions
-- `clear`: clear question history
-- `quit`: exit program
+### Important behavior notes
 
-## Installation
+- The script creates `val_dataset` but does not pass it to `Trainer` as `eval_dataset`, so no validation metrics are reported during training by default.
+- Labels are copied from tokenizer output IDs directly; this is standard for seq2seq fine-tuning with `Trainer`.
 
-1. Create and activate a virtual environment.
+## 5. Inference and Execution Flow (`generate_sql.py`)
 
-Windows (PowerShell):
+At runtime, the CLI does the following:
+
+1. Detects device (`cuda` if available, else `cpu`).
+2. Connects to SQLite database file `my_ai_database.db`.
+3. Loads tokenizer and model from local model artifacts.
+4. Accepts user commands/questions in a loop.
+5. Generates SQL with beam search and decoding controls.
+6. Executes generated SQL against SQLite.
+7. Prints tabulated query results.
+
+### Generation configuration in code
+
+- `max_length=200`
+- `num_beams=4`
+- `early_stopping=True`
+- `repetition_penalty=1.2`
+- `length_penalty=1.0`
+
+### Supported CLI commands
+
+- `help`: Shows available commands.
+- `history`: Displays prior natural-language questions in session memory.
+- `clear`: Clears in-memory question history.
+- `quit`: Closes DB connection and exits.
+
+### Error handling
+
+Inference catches two major error classes:
+
+- Model generation/runtime exceptions.
+- SQLite execution errors (invalid SQL, missing table/column, etc.).
+
+This is useful because text-to-SQL systems can produce syntactically valid but schema-incompatible SQL.
+
+## 6. Database Bootstrap (`build_database.py`)
+
+The project includes a deterministic local DB setup:
+
+- SQLite file: `my_ai_database.db`
+- Tables created if missing:
+	- `orders`
+	- `employees`
+	- `customers`
+	- `students`
+	- `products`
+- Sample rows inserted with `INSERT OR IGNORE` to avoid duplicate-key failure on re-runs.
+
+This script makes inference demos reproducible and provides immediate queryable data without external dependencies.
+
+## 7. Installation
+
+### Prerequisites
+
+- Python 3.10+ recommended
+- `pip`
+
+### Setup
+
+Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-```
-
-2. Install dependencies:
-
-```bash
 pip install -r requirements.txt
 ```
 
-## Usage
+## 8. End-to-End Usage
 
-### Initialize the local database
+### Step 1: (Optional) Train model
 
-```bash
-python build_database.py
-```
-
-Run this once before using the interactive SQL generator so tables and sample rows are available.
-
-### Train the model
+If you already have a valid `model/` folder, you can skip training.
 
 ```bash
 python train.py
 ```
 
-After training, `model/` will contain the saved weights and tokenizer files.
+### Step 2: Build local SQLite database
 
-### Generate SQL interactively
+```bash
+python build_database.py
+```
+
+### Step 3: Start interactive generator
 
 ```bash
 python generate_sql.py
 ```
 
-Example:
+## 9. Example Session
 
 ```text
-Enter question: show all customers from california
-Generated SQL: SELECT * FROM customers WHERE state = 'california';
+Enter question: show all customers in new york
+[Generated SQL]: SELECT * FROM customers WHERE city = 'New York';
+[Generation time]: 0.42s
+
+--- Database Results ---
++-------------+--------------+----------+-----+------------+
+| customer_id | name         | city     | age | membership |
++-------------+--------------+----------+-----+------------+
+| 101         | Diana Prince | New York | 28  | Gold       |
++-------------+--------------+----------+-----+------------+
+------------------------
 ```
 
-## Dependencies
+## 10. Dependencies
 
-From `requirements.txt`:
+Installed from `requirements.txt`:
 
-- torch
-- transformers
-- datasets
-- pandas
-- scikit-learn
-- tabulate
+- `torch`
+- `transformers`
+- `datasets`
+- `pandas`
+- `scikit-learn`
+- `tabulate`
 
-## Notes
+## 11. Limitations and Practical Notes
 
-- If GPU is available, training/inference can run faster with CUDA.
-- Keep training prefix format consistent (`translate English to SQL:`) across training and inference for best results.
+- Accuracy is bounded by dataset quality and schema coverage.
+- Generated SQL may be semantically wrong even if syntactically valid.
+- Current workflow uses SQLite only; SQL dialect differences may appear when moving to other databases.
+- Training currently does not report validation metrics unless `eval_dataset` and evaluation strategy are configured.
 
-## Troubleshooting
+## 12. Suggested Next Improvements
 
-- If you get `no such table` errors, run `python build_database.py` again to recreate demo tables.
-- If model files are missing, run `python train.py` to regenerate the `model/` folder.
-- If predictions look empty, verify the prompt prefix is unchanged in both training and inference scripts.
+1. Add evaluation during training (exact match, execution accuracy).
+2. Add schema-aware prompting (inject table/column metadata in prompt).
+3. Add SQL safety guardrails (allow-list operations, query timeout, read-only mode).
+4. Add tests for preprocessing, generation, and DB execution behavior.
+5. Add configurable DB backend support (SQLite/PostgreSQL/MySQL adapters).
 
-## Recommended Workflow
+## 13. Troubleshooting
 
-1. Install dependencies with `pip install -r requirements.txt`.
-2. Train or reuse a saved model in `model/`.
-3. Initialize SQLite data using `python build_database.py`.
-4. Start interactive generation with `python generate_sql.py`.
+- `no such table`: run `python build_database.py` to rebuild schema.
+- Model load errors: ensure `model/` contains tokenizer and model artifacts.
+- CUDA issues: verify PyTorch CUDA installation; CPU fallback is automatic.
+- Empty/poor predictions: ensure training and inference use identical prompt prefix.
