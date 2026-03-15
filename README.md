@@ -1,239 +1,130 @@
 # SQL Query Automation Platform
 
-An end-to-end deep learning pipeline that converts natural language questions into SQL queries using a sequence-to-sequence (Seq2Seq) architecture.
+This project trains a T5 model to convert English questions into SQL queries, then provides an interactive script to generate SQL from user input.
 
----
+## Overview
 
-## 📋 Table of Contents
+The workflow has two main phases:
 
-- [Overview](#overview)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Dataset](#dataset)
-- [Preprocessing Pipeline](#preprocessing-pipeline)
-- [Usage](#usage)
-- [Output Files](#output-files)
-- [Technologies Used](#technologies-used)
-- [Future Work](#future-work)
+1. Training (`train.py`)
+2. Inference (`generate_sql.py`)
 
----
+Training uses `dataset/text_to_sql_dataset_5000.csv` with two columns:
 
-## 🎯 Overview
+- `question`: natural language text
+- `sql`: target SQL query
 
-This platform automates the generation of SQL queries from natural language questions. It preprocesses text data through a multi-stage pipeline, preparing it for training a neural machine translation model. The goal is to enable users to query databases using plain English instead of writing SQL manually.
+The model is fine-tuned from `t5-small` and saved locally in the `model/` folder.
 
-**Key Features:**
-- Natural language to SQL translation
-- Multi-stage preprocessing pipeline
-- Tokenization with OOV (Out-Of-Vocabulary) handling
-- Sequence padding and train/validation splitting
-- Ready-to-use processed data for model training
-
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
-SQL-query-automation-platform/
-├── README.md                     # Project documentation
-├── requirements.txt              # Python dependencies
-├── data/
-│   ├── train.csv                 # Training dataset (questions + SQL queries)
-│   └── test.csv                  # Test dataset
-├── processed_data/
-│   ├── encoder_input_train.npy   # Padded training questions
-│   ├── encoder_input_val.npy     # Padded validation questions
-│   ├── decoder_input_train.npy   # Padded training SQL queries
-│   ├── decoder_input_val.npy     # Padded validation SQL queries
-│   ├── input_tokenizer.pickle    # Tokenizer for questions
-│   └── output_tokenizer.pickle   # Tokenizer for SQL queries
-└── src/
-    ├── run_preprocessing.py      # Main preprocessing script
-    └── preprocessing/
-        ├── stage1_loader.py      # Data loading and cleaning
-        ├── stage2_tokenizer.py   # Text tokenization
-        └── stage3_padding.py     # Sequence padding and splitting
+SQL-query-automation-platfrom/
+├── dataset/
+│   └── text_to_sql_dataset_5000.csv
+├── model/                         # saved trained model + tokenizer
+├── results/                       # trainer output and checkpoints
+├── train.py                       # fine-tuning script
+├── generate_sql.py                # interactive SQL generation script
+├── requirements.txt
+└── README.md
 ```
 
----
+## How It Works
 
-## 🔧 Installation
+### 1. Training Pipeline (`train.py`)
 
-### Prerequisites
-- Python 3.8+
-- pip package manager
+`train.py` performs the following steps:
 
-### Setup
+1. Loads dataset using Pandas.
+2. Splits data into train/validation/test using `train_test_split`.
+3. Converts Pandas DataFrames to Hugging Face `Dataset` objects.
+4. Preprocesses each sample with a prompt prefix:
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/yourusername/SQL-query-automation-platform.git
-   cd SQL-query-automation-platform
-   ```
-
-2. **Create a virtual environment (recommended):**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
----
-
-## 📊 Dataset
-
-The dataset consists of CSV files containing pairs of natural language questions and their corresponding SQL queries.
-
-### Data Format
-
-| Column | Description |
-|--------|-------------|
-| `question` | Natural language question (e.g., "Tell me what the notes are for South Australia") |
-| `sql` | Corresponding SQL query (e.g., "SELECT Notes FROM table WHERE Current slogan = SOUTH AUSTRALIA") |
-
-### Example Samples
-
-| Question | SQL Query |
-|----------|-----------|
-| Tell me what the notes are for South Australia | `SELECT Notes FROM table WHERE Current slogan = SOUTH AUSTRALIA` |
-| What is the format for South Australia? | `SELECT Format FROM table WHERE State/territory = South Australia` |
-
----
-
-## ⚙️ Preprocessing Pipeline
-
-The preprocessing is divided into three modular stages:
-
-### Stage 1: Data Loading (`stage1_loader.py`)
-
-- Loads training and test CSV files using Pandas
-- Extracts `question` and `sql` columns
-- Returns clean lists of questions and SQL queries
-
-```python
-questions, sql_queries = load_and_clean_data('train.csv', 'test.csv')
+```text
+translate English to SQL: <question>
 ```
 
-### Stage 2: Tokenization (`stage2_tokenizer.py`)
+5. Tokenizes both input question and target SQL (`max_length=64`, padded and truncated).
+6. Fine-tunes `T5ForConditionalGeneration` with Hugging Face `Trainer`.
+7. Saves the fine-tuned model and tokenizer to `model/`.
 
-- Creates separate tokenizers for questions and SQL queries
-- Converts text to integer sequences
-- Handles Out-Of-Vocabulary (OOV) tokens with `<OOV>` placeholder
-- Uses different filter settings for natural language vs SQL syntax
+Training output checkpoints are stored in `results/` (for example: `results/checkpoint-500`).
 
-```python
-input_seqs, output_seqs, input_tokenizer, output_tokenizer = tokenize_data(questions, sql_queries)
+### 2. Inference Pipeline (`generate_sql.py`)
+
+`generate_sql.py`:
+
+1. Loads tokenizer (`t5-small`) and trained model from `model/`.
+2. Detects device automatically (`cuda` if available, else `cpu`).
+3. Runs an interactive CLI loop for user questions.
+4. Builds model input using the same prefix used in training.
+5. Generates SQL with beam search settings:
+   - `max_length=200`
+   - `num_beams=4`
+   - `early_stopping=True`
+   - `repetition_penalty=1.2`
+   - `length_penalty=1.0`
+6. Prints generated SQL and generation time.
+
+Supported CLI commands:
+
+- `help`: show commands
+- `history`: show asked questions
+- `clear`: clear question history
+- `quit`: exit program
+
+## Installation
+
+1. Create and activate a virtual environment.
+
+Windows (PowerShell):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
-### Stage 3: Padding & Splitting (`stage3_padding.py`)
-
-- Pads all sequences to a fixed length of 30 tokens
-- Uses post-padding (zeros added at the end)
-- Splits data into 80% training and 20% validation sets
-- Uses a fixed random state for reproducibility
-
-```python
-x_train, x_val, y_train, y_val = pad_and_split(input_seqs, output_seqs)
-```
-
----
-
-## 🚀 Usage
-
-### Run the Complete Preprocessing Pipeline
+2. Install dependencies:
 
 ```bash
-cd src
-python run_preprocessing.py
+pip install -r requirements.txt
 ```
 
-### Expected Output
+## Usage
 
-```
---- Stage 1: Loading Data from data/train.csv ---
-Loaded X samples.
---- Stage 2: Tokenization ---
-Tokenization complete.
-Input Vocab Size: XXX
-Output Vocab Size: XXX
---- Stage 3: Padding & Splitting ---
-Padding Max Length: 30
-Training Set Shape: (X, 30)
-Validation Set Shape: (X, 30)
+### Train the model
 
-✅ All Preprocessing Stages Complete. Data saved to 'processed_data/'.
+```bash
+python train.py
 ```
 
----
+After training, `model/` will contain the saved weights and tokenizer files.
 
-## 📦 Output Files
+### Generate SQL interactively
 
-After running the preprocessing pipeline, the following files are generated in `processed_data/`:
-
-| File | Description | Format |
-|------|-------------|--------|
-| `encoder_input_train.npy` | Tokenized & padded training questions | NumPy array |
-| `encoder_input_val.npy` | Tokenized & padded validation questions | NumPy array |
-| `decoder_input_train.npy` | Tokenized & padded training SQL queries | NumPy array |
-| `decoder_input_val.npy` | Tokenized & padded validation SQL queries | NumPy array |
-| `input_tokenizer.pickle` | Fitted tokenizer for questions | Pickle file |
-| `output_tokenizer.pickle` | Fitted tokenizer for SQL queries | Pickle file |
-
-### Loading Processed Data
-
-```python
-import numpy as np
-import pickle
-
-# Load numpy arrays
-x_train = np.load('processed_data/encoder_input_train.npy')
-y_train = np.load('processed_data/decoder_input_train.npy')
-
-# Load tokenizers
-with open('processed_data/input_tokenizer.pickle', 'rb') as handle:
-    input_tokenizer = pickle.load(handle)
+```bash
+python generate_sql.py
 ```
 
----
+Example:
 
-## 🛠️ Technologies Used
+```text
+Enter question: show all customers from california
+Generated SQL: SELECT * FROM customers WHERE state = 'california';
+```
 
-| Technology | Purpose |
-|------------|---------|
-| **Python** | Core programming language |
-| **Pandas** | Data loading and manipulation |
-| **NumPy** | Numerical operations and array handling |
-| **TensorFlow/Keras** | Tokenization and sequence preprocessing |
-| **Scikit-learn** | Train/validation data splitting |
+## Dependencies
 
----
+From `requirements.txt`:
 
-## 🔮 Future Work
+- torch
+- transformers
+- datasets
+- pandas
+- scikit-learn
 
-- [ ] Implement Seq2Seq model with attention mechanism
-- [ ] Add LSTM/GRU encoder-decoder architecture
-- [ ] Create inference pipeline for real-time predictions
-- [ ] Build chatbot interface for SQL generation
-- [ ] Add support for multiple SQL dialects
-- [ ] Implement beam search for better query generation
-- [ ] Add evaluation metrics (BLEU score, exact match accuracy)
+## Notes
 
----
-
-## 📄 License
-
-This project is open source and available under the [MIT License](LICENSE).
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
-
-*Built with ❤️ for automating SQL query generation*
+- If GPU is available, training/inference can run faster with CUDA.
+- Keep training prefix format consistent (`translate English to SQL:`) across training and inference for best results.
