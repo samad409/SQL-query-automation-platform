@@ -93,6 +93,14 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Initialize the local database
+
+```bash
+python build_database.py
+```
+
+Run this once before using the interactive SQL generator so tables and sample rows are available.
+
 ### Train the model
 
 ```bash
